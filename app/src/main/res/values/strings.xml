@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Daily Ledger</string>
+    <string name="cd_sync_banner">Cloud sync illustration showing ledger book syncing with Google Drive</string>
+    <string name="cd_toggle_language">Switch language between English and Bengali</string>
+    <string name="cd_add_entry">Add new entry</string>
+    <string name="cd_sync_now">Sync with Google Drive</string>
+    <string name="cd_close">Close</string>
+    <string name="cd_delete">Delete</string>
+    <string name="cd_edit">Edit</string>
+    <string name="cd_copy_script">Copy Google Apps Script code</string>
+</resources>

@@ -1,0 +1,6 @@
+{
+  "name": "Daily Ledger",
+  "description": "Daily income, expense, and loan tracker with direct Google Drive JSON sync via Google Apps Script.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
