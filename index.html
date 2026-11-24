@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ডেইলি ইনকাম ও এক্সপেন্স ট্র্যাকার</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; background-color: #eef6fa; }
+  </style>
+</head>
+<body class="pb-16 text-slate-800">
+
+  <!-- Header & Month Switcher -->
+  <header class="max-w-xl mx-auto px-4 pt-5 pb-3 text-center">
+    <h1 class="text-xl font-bold text-slate-900">ডেইলি ইনকাম ও এক্সপেন্স ট্র্যাকার</h1>
+    <div class="flex items-center justify-center gap-2 mt-1 mb-3">
+      <span id="driveStatusBadge" class="text-[11px] px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-600 font-medium">
+        Google Drive কানেক্ট করা নেই
+      </span>
+    </div>
+    <div class="inline-flex items-center gap-4 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-200">
+      <button onclick="changeMonth(-1)" class="font-bold text-lg px-2 text-teal-700 hover:bg-teal-50 rounded-full">&lt;</button>
+      <span id="currentMonthLabel" class="font-semibold text-sm min-w-[140px]"></span>
+      <button onclick="changeMonth(1)" class="font-bold text-lg px-2 text-teal-700 hover:bg-teal-50 rounded-full">&gt;</button>
+    </div>
+  </header>
+
+  <main class="max-w-xl mx-auto px-4 space-y-4">
+
+    <!-- Summary Cards -->
+    <section class="grid grid-cols-3 gap-2.5">
+      <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center shadow-sm">
+        <p class="text-xs text-emerald-700 font-medium">মোট আয়</p>
+        <p id="totalIncome" class="text-base font-bold text-emerald-700 mt-1">৳0</p>
+      </div>
+      <div class="bg-rose-50 border border-rose-200 rounded-xl p-3 text-center shadow-sm">
+        <p class="text-xs text-rose-700 font-medium">মোট ব্যয়</p>
+        <p id="totalExpense" class="text-base font-bold text-rose-700 mt-1">৳0</p>
+      </div>
+      <div class="bg-teal-700 text-white rounded-xl p-3 text-center shadow-sm">
+        <p class="text-xs text-teal-100 font-medium">বর্তমান ব্যালেন্স</p>
+        <p id="currentBalance" class="text-base font-bold mt-1">৳0</p>
+      </div>
+    </section>
+
+    <!-- Active Loans Section -->
+    <section class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-bold text-sm text-slate-800">চলমান লোন ও বকেয়া (Active Loans)</h2>
+        <span id="activeLoanCount" class="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-semibold">0টি বাকি</span>
+      </div>
+      <div id="activeLoansList" class="space-y-2 text-xs"></div>
+    </section>
+
+    <!-- Daily Input Form -->
+    <section class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+      <h2 class="font-bold text-sm text-slate-800 mb-3">প্রতিদিনের ইনপুট (Daily Entry)</h2>
+      <form id="entryForm" class="space-y-3 text-sm">
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">তারিখ</label>
+            <input type="date" id="entryDate" required class="w-full border border-slate-300 rounded-lg px-2.5 py-2 text-xs" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">ধরন (Type)</label>
+            <select id="entryType" onchange="toggleFormFields()" class="w-full border border-slate-300 rounded-lg px-2.5 py-2 text-xs bg-white">
+              <option value="expense">ব্যয় (Expense)</option>
+              <option value="income">আয় (Income)</option>
+              <option value="new_loan">নতুন লোন যোগ (New Loan)</option>
+              <option value="loan_payment">লোন পরিশোধ (Loan Payment)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="categoryWrapper">
+          <label class="block text-xs text-slate-500 mb-1">খাত (Category)</label>
+          <input type="text" id="entryCategory" list="categorySuggestions" placeholder="যেমন: বাজার, চিকিৎসা, বেতন, শপিং" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs" />
+          <datalist id="categorySuggestions">
+            <option value="বেতন (Salary)">
+            <option value="ব্যবসা (Business)">
+            <option value="বাজার ও খাবার (Food)">
+            <option value="চিকিৎসা (Medical)">
+            <option value="শপিং (Shopping)">
+            <option value="যাতায়াত (Transport)">
+            <option value="বাসা ভাড়া (Rent)">
+            <option value="অন্যান্য (Others)">
+          </datalist>
+        </div>
+
+        <div id="newLoanWrapper" class="hidden">
+          <label class="block text-xs text-slate-500 mb-1">লোনের নাম / ব্যক্তি (যেকোনো নাম)</label>
+          <input type="text" id="newLoanName" placeholder="যেমন: পার্সোনাল লোন, ব্যাংক লোন, দোকানের বাকি" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs" />
+        </div>
+
+        <div id="loanSelectWrapper" class="hidden">
+          <label class="block text-xs text-slate-500 mb-1">কোন লোন পরিশোধ করছেন?</label>
+          <select id="loanSelect" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs bg-white"></select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">বিবরণ (Description)</label>
+            <input type="text" id="entryDesc" placeholder="সংক্ষিপ্ত বিবরণ" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">টাকার পরিমাণ (৳)</label>
+            <input type="number" id="entryAmount" min="1" step="any" required placeholder="0" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs" />
+          </div>
+        </div>
+
+        <button type="submit" class="w-full bg-teal-700 hover:bg-teal-800 text-white font-semibold py-2.5 rounded-xl text-sm transition">
+          যোগ করুন ও Drive-এ সেভ করুন
+        </button>
+      </form>
+    </section>
+
+    <!-- Expense Chart -->
+    <section class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+      <h2 class="font-bold text-sm text-slate-800 mb-2">মাসিক ব্যয়ের বিশ্লেষণ</h2>
+      <div class="max-w-[240px] mx-auto">
+        <canvas id="expenseChart"></canvas>
+      </div>
+      <p id="noChartData" class="text-center text-xs text-slate-400 py-4 hidden">এই মাসে এখনো কোনো ব্যয়ের তথ্য নেই।</p>
+    </section>
+
+    <!-- Running Ledger -->
+    <section class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+      <h2 class="font-bold text-sm text-slate-800 mb-3">চলমান লেনদেন তালিকা</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-100 text-slate-600">
+              <th class="p-2 rounded-l-lg">তারিখ</th>
+              <th class="p-2">খাত ও বিবরণ</th>
+              <th class="p-2 text-right">আয়</th>
+              <th class="p-2 text-right">ব্যয়</th>
+              <th class="p-2 text-right">ব্যালেন্স</th>
+              <th class="p-2 rounded-r-lg text-center">×</th>
+            </tr>
+          </thead>
+          <tbody id="ledgerBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Google Drive Direct Sync Settings -->
+    <section class="bg-white rounded-2xl p-4 shadow-sm border border-teal-200 space-y-3">
+      <h2 class="font-bold text-sm text-teal-800">Google Drive সরাসরি সিঙ্ক সেটিংস</h2>
+      <p class="text-[11px] text-slate-500">আপনার Google Apps Script Web App URL নিচে বসিয়ে সেভ করুন। এরপর প্রতিটি হিসাব অটোমেটিক আপনার Google Drive-এ সেভ হবে।</p>
+      <div class="flex gap-2">
+        <input type="url" id="driveUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 border border-slate-300 rounded-lg px-2.5 py-2 text-xs" />
+        <button onclick="saveDriveUrl()" class="bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold px-3 py-2 rounded-lg">কানেক্ট</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="syncToDrive()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold py-2 rounded-lg">
+          এখনই Drive-এ সেভ করুন
+        </button>
+        <button onclick="loadFromDrive(true)" class="bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-xs font-semibold py-2 rounded-lg">
+          Drive থেকে ইম্পোর্ট করুন
+        </button>
+      </div>
+      <div class="pt-2 border-t border-slate-100">
+        <h3 class="font-semibold text-xs text-slate-600 mb-1.5">পরিশোধিত লোন (Completed)</h3>
+        <div id="completedLoansList" class="text-xs text-slate-500 space-y-1"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const STORAGE_KEY = 'daily_finance_tracker_v1';
+    const DRIVE_URL_KEY = 'daily_finance_drive_url';
+
+    let state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { transactions: [], loans: [] };
+    let driveUrl = localStorage.getItem(DRIVE_URL_KEY) || '';
+    let currentDate = new Date();
+    let chartInstance = null;
+
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    document.getElementById('driveUrlInput').value = driveUrl;
+    document.getElementById('entryDate').valueAsDate = new Date();
+
+    function setDriveStatus(text, colorClass) {
+      const badge = document.getElementById('driveStatusBadge');
+      badge.textContent = text;
+      badge.className = `text-[11px] px-2.5 py-0.5 rounded-full font-medium ${colorClass}`;
+    }
+
+    function saveDriveUrl() {
+      const url = document.getElementById('driveUrlInput').value.trim();
+      if (!url.startsWith('https://script.google.com/')) {
+        return alert('অনুগ্রহ করে সঠিক Google Apps Script Web App URL দিন।');
+      }
+      driveUrl = url;
+      localStorage.setItem(DRIVE_URL_KEY, driveUrl);
+      loadFromDrive(true);
+    }
+
+    async function syncToDrive() {
+      if (!driveUrl) {
+        setDriveStatus('শুধু ফোনে সেভ আছে (Drive কানেক্ট করুন)', 'bg-amber-100 text-amber-800');
+        return;
+      }
+      setDriveStatus('Google Drive-এ সেভ হচ্ছে...', 'bg-blue-100 text-blue-700');
+      try {
+        await fetch(driveUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(state)
+        });
+        setDriveStatus('Google Drive-এ সেভ হয়েছে ✓', 'bg-emerald-100 text-emerald-800');
+      } catch (err) {
+        setDriveStatus('Drive সিঙ্ক ব্যর্থ হয়েছে (অফলাইনে সেভ আছে)', 'bg-rose-100 text-rose-700');
+      }
+    }
+
+    async function loadFromDrive(showAlert = false) {
+      if (!driveUrl) return;
+      setDriveStatus('Drive থেকে ডাটা লোড হচ্ছে...', 'bg-blue-100 text-blue-700');
+      try {
+        const res = await fetch(driveUrl);
+        const data = await res.json();
+        if (Array.isArray(data.transactions) && Array.isArray(data.loans)) {
+          state = data;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          render();
+          setDriveStatus('Google Drive সিঙ্ক চালু ✓', 'bg-emerald-100 text-emerald-800');
+          if (showAlert) alert('Google Drive থেকে সব ডাটা সফলভাবে ইম্পোর্ট হয়েছে!');
+        }
+      } catch (err) {
+        setDriveStatus('Drive থেকে লোড করা যায়নি', 'bg-rose-100 text-rose-700');
+        if (showAlert) alert('Drive থেকে ডাটা আনতে সমস্যা হয়েছে। URL এবং অনুমতি চেক করুন।');
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      syncToDrive();
+    }
+
+    function formatMoney(num) {
+      return '৳' + Number(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    }
+
+    function getSelectedMonthKey() {
+      const y = currentDate.getFullYear();
+      const m = String(currentDate.getMonth() + 1).padStart(2, '0');
+      return `${y}-${m}`;
+    }
+
+    function changeMonth(delta) {
+      currentDate.setMonth(currentDate.getMonth() + delta);
+      render();
+    }
+
+    function toggleFormFields() {
+      const type = document.getElementById('entryType').value;
+      document.getElementById('categoryWrapper').classList.toggle('hidden', type === 'new_loan' || type === 'loan_payment');
+      document.getElementById('newLoanWrapper').classList.toggle('hidden', type !== 'new_loan');
+      document.getElementById('loanSelectWrapper').classList.toggle('hidden', type !== 'loan_payment');
+    }
+
+    document.getElementById('entryForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const date = document.getElementById('entryDate').value;
+      const type = document.getElementById('entryType').value;
+      const desc = document.getElementById('entryDesc').value.trim();
+      const amount = parseFloat(document.getElementById('entryAmount').value);
+      if (!amount || amount <= 0) return;
+
+      if (type === 'new_loan') {
+        const loanName = document.getElementById('newLoanName').value.trim();
+        if (!loanName) return alert('অনুগ্রহ করে লোনের নাম লিখুন।');
+        state.loans.push({
+          id: 'loan_' + Date.now(),
+          name: loanName,
+          totalAmount: amount,
+          paidAmount: 0,
+          note: desc,
+          createdAt: date
+        });
+      } else if (type === 'loan_payment') {
+        const loanId = document.getElementById('loanSelect').value;
+        const loan = state.loans.find(l => l.id === loanId);
+        if (!loan) return alert('কোনো বকেয়া লোন সিলেক্ট করা হয়নি।');
+
+        const remaining = loan.totalAmount - loan.paidAmount;
+        if (amount > remaining) {
+          return alert(`এই লোনে বাকি আছে ${formatMoney(remaining)}। এর বেশি পরিশোধ করা যাবে না।`);
+        }
+
+        loan.paidAmount += amount;
+        state.transactions.push({
+          id: 'tx_' + Date.now(),
+          date,
+          type: 'loan_payment',
+          category: 'লোন পরিশোধ',
+          description: `${loan.name}${desc ? ' - ' + desc : ''}`,
+          amount,
+          loanId: loan.id
+        });
+      } else {
+        const category = document.getElementById('entryCategory').value.trim() || (type === 'income' ? 'আয়' : 'অন্যান্য');
+        state.transactions.push({
+          id: 'tx_' + Date.now(),
+          date,
+          type,
+          category,
+          description: desc || category,
+          amount
+        });
+      }
+
+      saveState();
+      this.reset();
+      document.getElementById('entryDate').value = date;
+      toggleFormFields();
+      render();
+    });
+
+    function deleteTransaction(id) {
+      if (!confirm('এই এন্ট্রিটি মুছে ফেলতে চান?')) return;
+      const idx = state.transactions.findIndex(t => t.id === id);
+      if (idx === -1) return;
+      const tx = state.transactions[idx];
+
+      if (tx.type === 'loan_payment' && tx.loanId) {
+        const loan = state.loans.find(l => l.id === tx.loanId);
+        if (loan) loan.paidAmount = Math.max(0, loan.paidAmount - tx.amount);
+      }
+
+      state.transactions.splice(idx, 1);
+      saveState();
+      render();
+    }
+
+    function deleteLoan(id) {
+      if (!confirm('এই লোনের রেকর্ড মুছে ফেলতে চান?')) return;
+      state.loans = state.loans.filter(l => l.id !== id);
+      saveState();
+      render();
+    }
+
+    function render() {
+      const monthKey = getSelectedMonthKey();
+      document.getElementById('currentMonthLabel').textContent = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+
+      const monthTx = state.transactions
+        .filter(t => t.date.startsWith(monthKey))
+        .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+
+      let totalInc = 0, totalExp = 0, runningBal = 0;
+      const categoryTotals = {};
+      const ledgerRows = [];
+
+      monthTx.forEach(tx => {
+        if (tx.type === 'income') {
+          totalInc += tx.amount;
+          runningBal += tx.amount;
+        } else {
+          totalExp += tx.amount;
+          runningBal -= tx.amount;
+          categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount;
+        }
+        ledgerRows.push({ ...tx, runningBal });
+      });
+
+      document.getElementById('totalIncome').textContent = formatMoney(totalInc);
+      document.getElementById('totalExpense').textContent = formatMoney(totalExp);
+      document.getElementById('currentBalance').textContent = formatMoney(totalInc - totalExp);
+
+      const activeLoans = state.loans.filter(l => (l.totalAmount - l.paidAmount) > 0);
+      const completedLoans = state.loans.filter(l => (l.totalAmount - l.paidAmount) <= 0);
+      document.getElementById('activeLoanCount').textContent = `${activeLoans.length}টি বাকি`;
+
+      const activeListEl = document.getElementById('activeLoansList');
+      const loanSelectEl = document.getElementById('loanSelect');
+
+      if (activeLoans.length === 0) {
+        activeListEl.innerHTML = '<p class="text-slate-400 text-center py-2">কোনো বকেয়া লোন নেই।</p>';
+        loanSelectEl.innerHTML = '<option value="">কোনো বকেয়া লোন নেই</option>';
+      } else {
+        activeListEl.innerHTML = activeLoans.map(l => {
+          const rem = l.totalAmount - l.paidAmount;
+          return `
+            <div class="grid grid-cols-12 items-center bg-slate-50 border border-slate-200 rounded-xl p-2.5 gap-1">
+              <div class="col-span-4 font-bold text-slate-800 truncate">${l.name}</div>
+              <div class="col-span-2 text-center text-slate-500">মোট<br><span class="font-semibold text-slate-700">${formatMoney(l.totalAmount)}</span></div>
+              <div class="col-span-2 text-center text-emerald-600">শোধ<br><span class="font-semibold">${formatMoney(l.paidAmount)}</span></div>
+              <div class="col-span-3 text-center bg-amber-100 text-amber-800 rounded-lg py-1 font-bold">বাকি<br>${formatMoney(rem)}</div>
+              <button onclick="deleteLoan('${l.id}')" class="col-span-1 text-rose-400 hover:text-rose-600 font-bold text-center">×</button>
+            </div>
+          `;
+        }).join('');
+
+        loanSelectEl.innerHTML = activeLoans.map(l => {
+          const rem = l.totalAmount - l.paidAmount;
+          return `<option value="${l.id}">${l.name} (বাকি: ${formatMoney(rem)})</option>`;
+        }).join('');
+      }
+
+      const compEl = document.getElementById('completedLoansList');
+      compEl.innerHTML = completedLoans.length === 0
+        ? '<p>এখনো কোনো সম্পূর্ণ পরিশোধিত লোন নেই।</p>'
+        : completedLoans.map(l => `<div class="flex justify-between bg-emerald-50 text-emerald-800 px-2.5 py-1.5 rounded-lg"><span>✓ ${l.name}</span><span class="font-semibold">${formatMoney(l.totalAmount)} পরিশোধিত</span></div>`).join('');
+
+      const ledgerBody = document.getElementById('ledgerBody');
+      if (ledgerRows.length === 0) {
+        ledgerBody.innerHTML = '<tr><td colspan="6" class="text-center text-slate-400 py-4">এই মাসে কোনো লেনদেন নেই।</td></tr>';
+      } else {
+        ledgerBody.innerHTML = ledgerRows.reverse().map(tx => `
+          <tr class="hover:bg-slate-50">
+            <td class="p-2 whitespace-nowrap text-slate-500">${tx.date.slice(5)}</td>
+            <td class="p-2">
+              <div class="font-semibold text-slate-700">${tx.category}</div>
+              <div class="text-[11px] text-slate-400">${tx.description}</div>
+            </td>
+            <td class="p-2 text-right font-semibold text-emerald-600">${tx.type === 'income' ? formatMoney(tx.amount) : '-'}</td>
+            <td class="p-2 text-right font-semibold text-rose-600">${tx.type !== 'income' ? formatMoney(tx.amount) : '-'}</td>
+            <td class="p-2 text-right font-bold text-slate-700">${formatMoney(tx.runningBal)}</td>
+            <td class="p-2 text-center">
+              <button onclick="deleteTransaction('${tx.id}')" class="text-rose-400 hover:text-rose-600 font-bold">×</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      const labels = Object.keys(categoryTotals);
+      const data = Object.values(categoryTotals);
+      const canvas = document.getElementById('expenseChart');
+      const noData = document.getElementById('noChartData');
+
+      if (chartInstance) chartInstance.destroy();
+      if (labels.length === 0) {
+        canvas.classList.add('hidden');
+        noData.classList.remove('hidden');
+      } else {
+        canvas.classList.remove('hidden');
+        noData.classList.add('hidden');
+        chartInstance = new Chart(canvas, {
+          type: 'doughnut',
+          data: {
+            labels,
+            datasets: [{
+              data,
+              backgroundColor: ['#0f766e', '#e11d48', '#f59e0b', '#3b82f6', '#8b5cf6', '#10b981', '#64748b']
+            }]
+          },
+          options: {
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }
+          }
+        });
+      }
+    }
+
+    toggleFormFields();
+    render();
+    if (driveUrl) loadFromDrive(false);
+  </script>
+</body>
+</html>
